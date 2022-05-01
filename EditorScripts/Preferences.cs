@@ -38,7 +38,7 @@ namespace AdvancedObjectSelector
 		}
 		private static Preferences preferences;
 
-		public UsageMode usage = UsageMode.OverrideDefault;
+		public UsageMode usage = UsageMode.ExtraButton;
 
 		internal static SerializedObject GetSerializedSettings()
 		{

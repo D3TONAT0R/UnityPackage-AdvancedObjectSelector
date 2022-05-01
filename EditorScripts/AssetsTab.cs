@@ -54,7 +54,11 @@ namespace AdvancedObjectSelector
 					//{
 						obj = GetAssetObject();
 						thumbnail = AssetPreview.GetAssetPreview(obj);
-						if(!thumbnail) thumbnail = AssetPreview.GetMiniThumbnail(obj);
+					if(thumbnail == null)
+					{
+						thumbnail = AssetPreview.GetMiniThumbnail(obj);
+					}
+						//if(!thumbnail) thumbnail = AssetPreview.GetMiniThumbnail(obj);
 						isLoadingThumbnail = false;
 					//});
 					//thread.Start();

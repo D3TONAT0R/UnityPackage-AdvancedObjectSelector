@@ -351,7 +351,8 @@ namespace AdvancedObjectSelector
 					var src = EditorGUIUtility.ObjectContent(newSelection, newSelection.GetType()).image as Texture2D;
 					if(src)
 					{
-						selectedObjectIcon = new Texture2D(src.width, src.height);
+						
+						selectedObjectIcon = new Texture2D(src.width, src.height, src.format, src.mipmapCount, false);
 						Graphics.CopyTexture(src, 0, 0, selectedObjectIcon, 0, 0);
 						var pixels = selectedObjectIcon.GetPixels32();
 						for(int i = 0; i < pixels.Length; i++)

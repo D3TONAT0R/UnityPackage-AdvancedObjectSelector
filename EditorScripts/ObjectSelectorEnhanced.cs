@@ -313,7 +313,7 @@ namespace AdvancedObjectSelector
 			return fullRect;
 		}
 
-		static void HandleInputs()
+		void HandleInputs()
 		{
 			var current = Event.current;
 			if (current.type == EventType.KeyDown)
@@ -366,9 +366,10 @@ namespace AdvancedObjectSelector
 			}
 		}
 
-		static void UpdateSearch()
+		void UpdateSearch()
 		{
 			foreach(var tab in AllTabs) tab.OnSearchChange();
+			Repaint();
 		}
 
 		static bool SearchForWords(Object obj, string name, System.Type type, List<string> keywords)
