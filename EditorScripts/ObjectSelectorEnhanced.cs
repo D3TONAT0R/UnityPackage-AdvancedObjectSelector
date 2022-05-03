@@ -137,13 +137,14 @@ namespace AdvancedObjectSelector
 		static System.Type targetType;
 		static SerializedObject serializedObject;
 		static string serializedPropPath;
+		static Tab[] enabledTabs;
 
 		static string searchString = "";
 
 		static float previewAreaHeight = 150;
 		static Vector2 scroll;
 		static bool initialized;
-		static bool showSceneResults = true;
+		static int tabIndex;
 		static bool previewAreaSplitterDrag;
 
 		static Tab sceneTab = new SceneObjectsTab();
@@ -156,7 +157,7 @@ namespace AdvancedObjectSelector
 		static Editor editor;
 		static System.Type cachedEditorType;
 
-		static Tab CurrentTab => showSceneResults ? sceneTab : assetsTab;
+		static Tab CurrentTab => enabledTabs[tabIndex];
 		static Tab[] AllTabs => new Tab[] { assetsTab, sceneTab };
 
 		[InitializeOnLoadMethod]
@@ -171,6 +172,13 @@ namespace AdvancedObjectSelector
 					if (!typeDictionary.ContainsKey(ts)) typeDictionary.Add(ts, t);
 				}
 			}
+		}
+
+		internal static Tab[] GetEnabledTabsForType(System.Type type)
+		{
+			if (type == typeof(GameObject)) return new Tab[] { assetsTab, sceneTab };
+			else if (typeof(Component).IsAssignableFrom(type)) return new Tab[] { sceneTab };
+			else return new Tab[] { assetsTab };
 		}
 
 		private static List<Assembly> GetGameAssembliesIncludingUnity()
@@ -210,6 +218,9 @@ namespace AdvancedObjectSelector
 			serializedObject = targetProperty.serializedObject;
 			serializedPropPath = targetProperty.propertyPath;
 			targetType = GetType(targetProperty);
+			enabledTabs = GetEnabledTabsForType(targetType);
+			//Always start with the rightmost tab open
+			tabIndex = enabledTabs.Length - 1;
 			needsTypeLabel = !(targetType == typeof(Transform) || targetType == typeof(GameObject));
 			GetWindow<ObjectSelectorEnhanced>(true, $"Select {targetType.Name} ({targetProperty.displayName})", true);
 		}
@@ -303,10 +314,8 @@ namespace AdvancedObjectSelector
 			var r = GUILayoutUtility.GetRect(GUIContent.none, EditorStyles.toolbar, GUILayout.ExpandWidth(true));
 			var fullRect = r;
 			if(Event.current.type == EventType.Repaint) EditorStyles.toolbar.Draw(r, false, false, false, false);
-			r.width = 60;
-			showSceneResults = !GUI.Toggle(r, !showSceneResults, assetsTab.TabName, Styles.tab);
-			r.x += r.width;
-			showSceneResults = GUI.Toggle(r, showSceneResults, sceneTab.TabName, Styles.tab);
+			r.width = 60 * enabledTabs.Length;
+			tabIndex = GUI.Toolbar(r, tabIndex, enabledTabs.Select(t => t.TabName).ToArray(), Styles.tab);
 			r.x += r.width;
 			r.width = fullRect.width - r.x;
 			CurrentTab.OnHeader(r);

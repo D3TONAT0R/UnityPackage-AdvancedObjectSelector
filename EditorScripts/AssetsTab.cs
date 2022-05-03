@@ -12,27 +12,108 @@ namespace AdvancedObjectSelector
 		{
 			const string elipsis = "...";
 
+			/*
+			private static readonly string[] builtinMeshes = new string[]
+			{
+				"Cube",
+				"Capsule",
+				"Cylinder",
+				"Plane",
+				"Sphere",
+				"Quad"
+			};
+			*/
+
+			private static Object[] builtinAssets;
+
 			class Asset
 			{
-				public readonly string guid;
-				public readonly string assetName;
+				public string guid;
+				public string assetName;
+				public string path;
+				public bool isSubAsset = false;
+				public bool isBuiltinAsset = false;
 				private Object obj;
-				private string path;
 				private Texture2D thumbnail;
 
 				private bool isLoadingThumbnail;
 
-				public Asset(string guid)
+				public bool IsVisible
 				{
-					this.guid = guid;
-					path = AssetDatabase.GUIDToAssetPath(guid);
-					assetName = System.IO.Path.GetFileNameWithoutExtension(path);
+					get => visible;
+					set
+					{
+						if(value != visible)
+						{
+							LoadPreviewAsync();
+						}
+						visible = value;
+					}
+				}
+				private bool visible;
+
+				private Asset() { }
+
+				public static Asset CreateAsset(string guid)
+				{
+					var path = AssetDatabase.GUIDToAssetPath(guid);
+					return new Asset()
+					{
+						guid = guid,
+						path = path,
+						assetName = System.IO.Path.GetFileNameWithoutExtension(path)
+					};
+				}
+
+				public static Asset CreateSubAsset(Object subAsset, string parentGuid)
+				{
+					var path = AssetDatabase.GUIDToAssetPath(parentGuid);
+
+					return new Asset()
+					{
+						isSubAsset = true,
+						guid = parentGuid,
+						assetName = subAsset.name,
+						path = AssetDatabase.GUIDToAssetPath(parentGuid),
+						obj = subAsset
+					};
+				}
+
+				public static Asset CreateBuiltinAsset(Object builtinAsset)
+				{
+					AssetDatabase.TryGetGUIDAndLocalFileIdentifier(builtinAsset, out var guid, out long _);
+					return new Asset()
+					{
+						isBuiltinAsset = true,
+						guid = AssetDatabase.GUIDToAssetPath(guid),
+						assetName = builtinAsset.name,
+						obj = builtinAsset
+					};
+				}
+
+				public static Asset CreateBuiltinAsset<T>(string name) where T : Object
+				{
+					var builtinAsset = Resources.GetBuiltinResource<T>(name);
+					if (!builtinAsset) throw new System.NullReferenceException();
+					AssetDatabase.TryGetGUIDAndLocalFileIdentifier(builtinAsset, out var guid, out long _);
+					return new Asset()
+					{
+						isBuiltinAsset = true,
+						guid = AssetDatabase.GUIDToAssetPath(guid),
+						assetName = System.IO.Path.GetFileNameWithoutExtension(name),
+						obj = builtinAsset
+					};
 				}
 
 				public Object GetAssetObject()
 				{
 					if(obj) return obj;
 					obj = AssetDatabase.LoadAssetAtPath(path, targetType);
+					return obj;
+				}
+
+				public Object GetSubAssetObject()
+				{
 					return obj;
 				}
 
@@ -85,17 +166,72 @@ namespace AdvancedObjectSelector
 
 			internal override void Init()
 			{
+				if(builtinAssets == null)
+				{
+					List<Object> builtins = new List<Object>();
+					builtins.AddRange(AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra"));
+					builtins.AddRange(AssetDatabase.LoadAllAssetsAtPath("Library/unity default resources"));
+					builtinAssets = builtins.ToArray();
+				}
+
 				projectAssets.Clear();
 				foreach(var g in AssetDatabase.FindAssets("t:" + targetType.Name, new string[] { "Assets" }))
 				{
-					projectAssets.Add(new Asset(g));
+					AddAssetAndSubAssets(g, projectAssets);
 				}
 				packageAssets.Clear();
 				foreach(var g in AssetDatabase.FindAssets("t:" + targetType.Name, new string[] { "Packages" }))
 				{
-					packageAssets.Add(new Asset(g));
+					AddAssetAndSubAssets(g, packageAssets);
 				}
+
+				foreach(var b in builtinAssets)
+				{
+					if(targetType.IsAssignableFrom(b.GetType()))
+					{
+						projectAssets.Add(Asset.CreateBuiltinAsset(b));
+					}
+				}
+				/*
+				if(targetType == typeof(Mesh))
+				{
+					//Add default meshes
+					foreach(var m in builtinMeshes)
+					{
+						projectAssets.Add(Asset.CreateBuiltinAsset<Mesh>(m + ".fbx"));
+					}
+				}
+				*/
 				elipsisWidth = Styles.nameLabel.CalcSize(new GUIContent("...")).x - Styles.nameLabel.padding.horizontal;
+			}
+
+			private void AddAssetAndSubAssets(string guid, List<Asset> list)
+			{
+				if(list.FindIndex(a => a.guid == guid) < 0)
+				{
+					var asset = Asset.CreateAsset(guid);
+					
+					var subAssets = AssetDatabase.LoadAllAssetRepresentationsAtPath(asset.path);
+					if(subAssets.Length > 0)
+					{
+						var obj = AssetDatabase.LoadMainAssetAtPath(asset.path);
+						if(targetType.IsAssignableFrom(obj.GetType()))
+						{
+							list.Add(asset);
+						}
+						foreach (var su in subAssets)
+						{
+							if(su.GetType() == targetType)
+							{
+								list.Add(Asset.CreateSubAsset(su, guid));
+							}
+						}
+					}
+					else
+					{
+						list.Add(asset);
+					}
+				}
 			}
 
 			protected override void OnGUI()
@@ -129,9 +265,10 @@ namespace AdvancedObjectSelector
 
 			void DrawItem(Asset asset)
 			{
-				var gs = GetGridItemSize();
+				var gridItemSize = GetGridItemSize();
+				bool isGrid = gridItemSize.x > 0;
 				Rect rect;
-				if(gs.x > 0)
+				if(isGrid)
 				{
 					rect = NextGridRect(size.x);
 				}
@@ -142,7 +279,9 @@ namespace AdvancedObjectSelector
 								
 				if(Event.current.type == EventType.Repaint) lastItemRect = rect;
 
-				if(rect.yMax < scroll.y || rect.yMin > scroll.y + size.y + 40)
+				bool visible = rect.yMax >= scroll.y || rect.yMin >= scroll.y + size.y + 40;
+				if (asset != null && Event.current.type == EventType.Repaint) asset.IsVisible = visible;
+				if (!visible)
 				{
 					//The item is not visible, skip it
 					return;
@@ -151,7 +290,7 @@ namespace AdvancedObjectSelector
 				Texture icon;
 				if(asset != null)
 				{
-					if(gs.x > 0)
+					if(isGrid)
 					{
 						string s = GetShortenedString(asset.assetName, rect.width - 8, Styles.nameLabel, out bool isShortened);
 						content.text = s;
@@ -168,9 +307,16 @@ namespace AdvancedObjectSelector
 					}
 					else
 					{
-						content.text = $"{asset.assetName}";
+						content.text = $"{asset.assetName}";// {(asset.isSubAsset ? "*" : "")}";
 						content.tooltip = "";
-						icon = AssetDatabase.GetCachedIcon(AssetDatabase.GUIDToAssetPath(asset.guid));
+						if (asset.isBuiltinAsset)
+						{
+							icon = asset.GetThumbnail();
+						}
+						else
+						{
+							icon = AssetDatabase.GetCachedIcon(AssetDatabase.GUIDToAssetPath(asset.guid));
+						}
 					}
 				}
 				else
@@ -184,19 +330,19 @@ namespace AdvancedObjectSelector
 				{
 					var style = isSelected ? Styles.listItemSelected : Styles.listItem;
 
-					if(gs.x > 0) rect = rect.Inset(4, 4, 4, 4);
+					if(isGrid) rect = rect.Inset(4, 4, 4, 4);
 
 					style.Draw(rect, "", false, false, false, false);
-					rect.xMin += GetIndentationOffset() + 5;
 
 					Rect rIcon, rLabel;
 
-					if(gs.x > 0)
+					if(isGrid)
 					{
 						rect.SplitVertical(rect.height - listItemHeight, out rIcon, out rLabel);
 					}
 					else
 					{
+						rect.xMin += GetIndentationOffset() + 5;
 						rect.SplitHorizontal(rect.height, out rIcon, out rLabel, 2);
 					}
 
@@ -232,7 +378,7 @@ namespace AdvancedObjectSelector
 					Object obj;
 					if(asset != null)
 					{
-						obj = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(asset.guid), targetType);
+						obj = asset.GetAssetObject();
 					}
 					else
 					{
@@ -272,7 +418,14 @@ namespace AdvancedObjectSelector
 				}
 				else
 				{
-					return AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(currentValue)) == a.guid;
+					if (a.isSubAsset)
+					{
+						return currentValue == a.GetSubAssetObject();
+					}
+					else
+					{
+						return AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(currentValue)) == a.guid;
+					}
 				}
 			}
 
@@ -282,8 +435,8 @@ namespace AdvancedObjectSelector
 				packageAssetsFiltered.Clear();
 				if(!string.IsNullOrEmpty(searchString))
 				{
-					var projectGuids = AssetDatabase.FindAssets(searchString, new string[] { "Assets" });
-					var packageGuids = AssetDatabase.FindAssets(searchString, new string[] { "Packages" });
+					var projectGuids = AssetDatabase.FindAssets(searchString, new string[] { "Assets" }).Distinct().ToArray();
+					var packageGuids = AssetDatabase.FindAssets(searchString, new string[] { "Packages" }).Distinct().ToArray();
 					foreach(var guid in projectGuids)
 					{
 						Asset asset = projectAssets.FirstOrDefault(a => a.guid == guid);
@@ -300,6 +453,11 @@ namespace AdvancedObjectSelector
 					projectAssetsFiltered.AddRange(projectAssets);
 					packageAssetsFiltered.AddRange(packageAssets);
 				}
+			}
+
+			private static void ApplySearchFilter()
+			{
+
 			}
 
 			private string GetShortenedString(string str, float maxWidth, GUIStyle style, out bool isShortened)
