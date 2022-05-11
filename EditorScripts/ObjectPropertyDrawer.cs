@@ -13,26 +13,32 @@ namespace AdvancedObjectSelector
 
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 		{
-			var usage = Preferences.Instance.usage;
-			if(usage == Preferences.UsageMode.Disabled) return;
+			OnGUI(position, property, label, fieldInfo.FieldType);
+		}
 
-			var content = EditorGUIUtility.ObjectContent(property.objectReferenceValue, fieldInfo.FieldType);
+		public static void OnGUI(Rect position, SerializedProperty property, GUIContent label, System.Type fieldType)
+		{
+			var usage = Preferences.Instance.usage;
+			if (usage == Preferences.UsageMode.Disabled) return;
+
+			var content = EditorGUIUtility.ObjectContent(property.objectReferenceValue, fieldType);
 
 			position.SplitHorizontal(position.width - 18, out _, out var knob);
 			knob = knob.Inset(0, 0, 1, 1);
-			if(usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
+			if (usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
 			var ctrlID = GUIUtility.GetControlID(FocusType.Passive) + 1;
 			bool openObjectPicker = GUI.Button(knob, "", GUIStyle.none);
 			EditorGUI.ObjectField(position, property, label);
-			if(usage == Preferences.UsageMode.ExtraButton) {
-				if(extraBtnStyle == null)
+			if (usage == Preferences.UsageMode.ExtraButton)
+			{
+				if (extraBtnStyle == null)
 				{
 					extraBtnStyle = "ObjectFieldButton";
 					plusIcon = EditorGUIUtility.IconContent("d_Toolbar Plus").image;
 				}
-				if(Event.current.type == EventType.Repaint) extraBtnStyle.Draw(knob, GUIContent.none, ctrlID);
-				knob.xMin = knob.xMax-8;
-				knob.yMin = knob.yMax-8;
+				if (Event.current.type == EventType.Repaint) extraBtnStyle.Draw(knob, GUIContent.none, ctrlID);
+				knob.xMin = knob.xMax - 8;
+				knob.yMin = knob.yMax - 8;
 				GUI.DrawTexture(knob, plusIcon);
 			}
 			if (openObjectPicker)
