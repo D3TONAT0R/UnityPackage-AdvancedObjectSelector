@@ -486,26 +486,58 @@ namespace AdvancedObjectSelector
 		{
 			var path = property.propertyPath;
 			System.Type parentType = property.serializedObject.targetObject.GetType();
-			//object obj = property.serializedObject.targetObject;
+			object obj = property.serializedObject.targetObject;
 			while (path.Contains("."))
 			{
 				string root = path.Split('.')[0];
 				if (path.StartsWith("Array.data["))
 				{
 					path = path.Substring("Array.data[".Length);
-					while (path[0] != ']') path = path.Substring(1);
+					string indexString = "";
+					while (path[0] != ']')
+					{
+						indexString += path[0];
+						path = path.Substring(1);
+					}
+					int index = int.Parse(indexString);
 					path = path.Substring(1);
 					if (path.Length > 0 && path[0] == '.') path = path.Substring(1);
-					parentType = parentType.GetElementType();
+					if (parentType.IsArray)
+					{
+						//It's a regular array
+						var arr = obj as System.Array;
+						obj = arr.GetValue(index);
+						parentType = obj.GetType();
+					}
+					else
+					{
+						//It's a List
+						var indexer = GetIndexer(obj.GetType());
+						obj = indexer.GetGetMethod().Invoke(obj, new object[] { index });
+						parentType = obj.GetType();
+					}
 					if (path.Length == 0) return parentType;
 				}
 				else
 				{
-					parentType = parentType.GetField(root).FieldType;
+					obj = parentType.GetField(root).GetValue(obj);
+					parentType = obj.GetType();
 					path = path.Substring(root.Length + 1);
 				}
 			}
 			return parentType.GetField(path).FieldType;
+		}
+
+		static PropertyInfo GetIndexer(System.Type type)
+		{
+			foreach (PropertyInfo pi in type.GetProperties())
+			{
+				if (pi.GetIndexParameters().Length > 0)
+				{
+					return pi;
+				}
+			}
+			return null;
 		}
 
 		// This is the preview area at the bottom of the screen
