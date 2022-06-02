@@ -507,23 +507,21 @@ namespace AdvancedObjectSelector
 						//It's a regular array
 						var arr = obj as System.Array;
 						obj = arr.GetValue(index);
-						parentType = obj.GetType();
 					}
 					else
 					{
 						//It's a List
 						var indexer = GetIndexer(obj.GetType());
 						obj = indexer.GetGetMethod().Invoke(obj, new object[] { index });
-						parentType = obj.GetType();
 					}
 					if (path.Length == 0) return parentType;
 				}
 				else
 				{
 					obj = parentType.GetField(root).GetValue(obj);
-					parentType = obj.GetType();
 					path = path.Substring(root.Length + 1);
 				}
+				parentType = obj.GetType();
 			}
 			return parentType.GetField(path).FieldType;
 		}
