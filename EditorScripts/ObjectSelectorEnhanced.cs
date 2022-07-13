@@ -518,7 +518,7 @@ namespace AdvancedObjectSelector
 				}
 				else
 				{
-					obj = parentType.GetField(root).GetValue(obj);
+					obj = parentType.GetField(root, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(obj);
 					path = path.Substring(root.Length + 1);
 				}
 				parentType = obj.GetType();
