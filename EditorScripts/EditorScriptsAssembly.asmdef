@@ -1,5 +1,5 @@
 {
-    "name": "D3T_AdvancedObjectSelector",
+    "name": "D3T.AdvancedObjectSelector",
     "references": [],
     "includePlatforms": [
         "Editor"
