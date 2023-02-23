@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
@@ -507,12 +508,14 @@ namespace AdvancedObjectSelector
 						//It's a regular array
 						var arr = obj as System.Array;
 						obj = arr.GetValue(index);
+						parentType = parentType.GetElementType();
 					}
 					else
 					{
 						//It's a List
 						var indexer = GetIndexer(obj.GetType());
 						obj = indexer.GetGetMethod().Invoke(obj, new object[] { index });
+						parentType = parentType.GenericTypeArguments[0];
 					}
 					if (path.Length == 0) return parentType;
 				}
@@ -523,7 +526,7 @@ namespace AdvancedObjectSelector
 				}
 				parentType = obj.GetType();
 			}
-			return parentType.GetField(path).FieldType;
+			return parentType.GetField(path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FieldType;
 		}
 
 		static PropertyInfo GetIndexer(System.Type type)
