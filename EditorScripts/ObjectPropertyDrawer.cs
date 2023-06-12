@@ -28,6 +28,14 @@ namespace AdvancedObjectSelector
 			if (usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
 			var ctrlID = GUIUtility.GetControlID(FocusType.Passive) + 1;
 			bool openObjectPicker = GUI.Button(knob, "", GUIStyle.none);
+
+			var inspectRect = position;
+			inspectRect.xMin += EditorGUIUtility.labelWidth;
+			if(property.objectReferenceValue != null && GUI.Button(inspectRect, GUIContent.none, GUI.skin.button) && Event.current.shift)
+			{
+				PopoutInspector.Open(property.objectReferenceValue);
+			}
+
 			EditorGUI.ObjectField(position, property, label);
 			if (usage == Preferences.UsageMode.ExtraButton)
 			{
