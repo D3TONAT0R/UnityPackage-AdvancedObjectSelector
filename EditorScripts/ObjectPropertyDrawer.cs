@@ -31,7 +31,7 @@ namespace AdvancedObjectSelector
 
 			var inspectRect = position;
 			inspectRect.xMin += EditorGUIUtility.labelWidth;
-			if(property.objectReferenceValue != null && GUI.Button(inspectRect, GUIContent.none, GUI.skin.button) && Event.current.shift)
+			if(property.objectReferenceValue != null && Event.current.shift && GUI.Button(inspectRect, GUIContent.none, GUIStyle.none))
 			{
 				PopoutInspector.Open(property.objectReferenceValue);
 			}
