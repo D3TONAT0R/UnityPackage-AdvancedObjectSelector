@@ -14,12 +14,11 @@ namespace AdvancedObjectSelector
 
 			internal override string TabName => "Scene";
 
-			static bool expandInChildren = false;
-			static bool expandInParents = false;
+			static bool expandInChildren = true;
+			static bool expandInParents = true;
 			static bool expandAll = true;
 			static bool showRanks = false;
 
-			static Texture2D selectedObjectIcon;
 			static SceneObjectSection navSection = SceneObjectSection.None;
 			static int navIndex = 0;
 
@@ -59,7 +58,7 @@ namespace AdvancedObjectSelector
 				return type.IsSubclassOf(typeof(Component)) || type == typeof(Component) || type == typeof(GameObject);
 			}
 
-			internal override void Init()
+			internal override void OnInit()
 			{
 				allObjects.Clear();
 				onSelf.Clear();
@@ -70,8 +69,6 @@ namespace AdvancedObjectSelector
 					var go = ((Component)serializedObject.targetObject).gameObject;
 					allObjects.AddRange(FindObjectsOfType(targetType).Where(o => GetGameObject(o).scene == go.scene));
 
-					//if (serializedObject.targetObject)
-					//{
 					if (targetType == typeof(GameObject))
 					{
 						onSelf.Add(go);
@@ -86,10 +83,9 @@ namespace AdvancedObjectSelector
 					}
 					inChildren.RemoveAll(c => onSelf.Contains(c));
 					inParents.RemoveAll(c => onSelf.Contains(c));
-					//}
 				}
-				expandInChildren = false;
-				expandInParents = false;
+				expandInChildren = true;
+				expandInParents = true;
 				expandAll = true;
 
 				UpdatePosition(true);
@@ -253,13 +249,14 @@ namespace AdvancedObjectSelector
 
 					style.Draw(rect, "", false, false, false, false);
 					rect.xMin += GetIndentationOffset();
-					rect.SplitHorizontal(rect.height, out var rIcon, out var rLabel, 2);
+					rect.SplitHorizontal(16, out var rIcon, out var rLabel, 2);
+					rIcon.width = 16;
+					rIcon.height = rIcon.width;
 
-					if(isSelected && icon) icon = selectedObjectIcon;
 					var nameLabelStyle = isSelected ? Styles.nameLabelSelected : Styles.nameLabel;
 					var typeLabelStyle = isSelected ? Styles.typeLabelSelected : Styles.typeLabel;
 
-					if(icon) GUI.DrawTexture(rIcon, icon, ScaleMode.ScaleToFit);
+					DrawIcon(rIcon, icon, isSelected, true);
 					GUI.Label(rLabel, content, nameLabelStyle);
 
 					if(needsTypeLabel && obj)
@@ -346,6 +343,7 @@ namespace AdvancedObjectSelector
 
 			internal override void OnSelectionChange(Object newSelection)
 			{
+				/*
 				if(newSelection != null)
 				{
 					var src = EditorGUIUtility.ObjectContent(newSelection, newSelection.GetType()).image as Texture2D;
@@ -365,6 +363,7 @@ namespace AdvancedObjectSelector
 						selectedObjectIcon.Apply();
 					}
 				}
+				*/
 			}
 
 			internal override void OnValueChange(Object newValue)

@@ -64,14 +64,22 @@ namespace AdvancedObjectSelector
 		{
 			public const int listItemHeight = 18;
 
-			protected int listIndex = 0;
+			protected static Material iconMaterial;
+
 			protected Vector2 size;
+			protected int listIndex = 0;
 
 			internal abstract string TabName { get; }
 
 			internal virtual bool NeedsExtraIndentation => false;
 
-			internal virtual void Init() { }
+			public void Init()
+			{
+				iconMaterial = new Material(Shader.Find("Hidden/SelectorIcon"));
+				OnInit();
+			}
+
+			internal virtual void OnInit() { }
 
 			internal virtual void HandleInputEvent(Event keyDownEvent) { }
 
@@ -103,6 +111,16 @@ namespace AdvancedObjectSelector
 				var r = NextListRect();
 				r.SplitVertical(r.height * 0.5f, out _, out r);
 				if(IsRepainting) Styles.separator.Draw(r, false, false, false, false);
+			}
+
+			protected void DrawIcon(Rect position, Texture icon, bool selected, bool allowWhiteout)
+			{
+				if(icon)
+				{
+					iconMaterial.SetFloat("_Whiteout", (selected && allowWhiteout) ? 1 : 0);
+					EditorGUI.DrawPreviewTexture(position, icon, iconMaterial, ScaleMode.ScaleToFit);
+					//Graphics.DrawTexture(position, icon, iconMaterial);
+				}
 			}
 
 			protected Rect NextListRect()

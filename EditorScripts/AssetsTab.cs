@@ -31,6 +31,7 @@ namespace AdvancedObjectSelector
 				public string guid;
 				public string assetName;
 				public string path;
+				public System.Type assetType;
 				public bool isSubAsset = false;
 				public bool isBuiltinAsset = false;
 				private Object obj;
@@ -61,6 +62,7 @@ namespace AdvancedObjectSelector
 					{
 						guid = guid,
 						path = path,
+						assetType = AssetDatabase.GetMainAssetTypeAtPath(path),
 						assetName = System.IO.Path.GetFileNameWithoutExtension(path)
 					};
 				}
@@ -164,7 +166,7 @@ namespace AdvancedObjectSelector
 
 			internal override string TabName => "Assets";
 
-			internal override void Init()
+			internal override void OnInit()
 			{
 				if(builtinAssets == null)
 				{
@@ -349,7 +351,8 @@ namespace AdvancedObjectSelector
 					var nameLabelStyle = isSelected ? Styles.nameLabelSelected : Styles.nameLabel;
 					var typeLabelStyle = isSelected ? Styles.typeLabelSelected : Styles.typeLabel;
 
-					if(icon) GUI.DrawTexture(rIcon, icon, ScaleMode.ScaleToFit);
+					bool allowWhiteout = asset != null  && !(typeof(Texture).IsAssignableFrom(asset.assetType) || asset.assetType == typeof(Material));
+					DrawIcon(rIcon, icon, isSelected, allowWhiteout);
 
 					//EditorGUIUtility.get
 

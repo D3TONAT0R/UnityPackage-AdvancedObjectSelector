@@ -33,8 +33,6 @@ namespace AdvancedObjectSelector
 			var usage = Preferences.Instance.usage;
 			if (usage == Preferences.UsageMode.Disabled) return;
 
-			var content = EditorGUIUtility.ObjectContent(property.objectReferenceValue, fieldType);
-
 			position.SplitHorizontal(position.width - 18, out _, out var knob);
 			knob = knob.Inset(0, 0, 1, 1);
 			if (usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
