@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -10,27 +9,67 @@ namespace AdvancedObjectSelector
 	{
 		internal class SceneObjectsTab : Tab
 		{
-			enum SceneObjectSection { None, All, Self, Children, Parents }
+			private class Section
+			{
+				public string title;
+
+				public List<Object> objects = new List<Object>();
+				public List<Object> filtered = new List<Object>();
+				public bool expand = true;
+
+				public Section(string title)
+				{
+					this.title = title;
+				}
+
+				public void ApplyFilter(List<string> keywords)
+				{
+					filtered.Clear();
+					if(keywords != null)
+					{
+						filtered.AddRange(objects.Where(o => SearchForWords(o, o.name, o.GetType(), keywords)));
+					}
+					else
+					{
+						filtered.AddRange(objects);
+					}
+				}
+
+				public void Clear()
+				{
+					objects.Clear();
+					filtered.Clear();
+				}
+
+				public void Set(IEnumerable<Object> o, Section exclude)
+				{
+					Clear();
+					if(exclude != null)
+					{
+						objects.AddRange(o.Where(x => !exclude.objects.Contains(x)));
+					}
+					else
+					{
+						objects.AddRange(o);
+					}
+					expand = true;
+				}
+			}
+
+			enum SceneObjectSection { None, All, Self, Children, Parents, Siblings }
 
 			internal override string TabName => "Scene";
 
-			static bool expandInChildren = true;
-			static bool expandInParents = true;
-			static bool expandAll = true;
 			static bool showRanks = false;
 
 			static SceneObjectSection navSection = SceneObjectSection.None;
 			static int navIndex = 0;
 
-			static List<Object> allObjects = new List<Object>();
-			static List<Object> inChildren = new List<Object>();
-			static List<Object> inParents = new List<Object>();
-			static List<Object> onSelf = new List<Object>();
-
-			static List<Object> allObjectsFiltereed = new List<Object>();
-			static List<Object> inChildrenFiltered = new List<Object>();
-			static List<Object> inParentsFiltered = new List<Object>();
-			static List<Object> onSelfFiltered = new List<Object>();
+			static readonly Section inScene = new Section("In Scene");
+			static readonly Section onSelf = new Section("On Self");
+			static readonly Section inChildren = new Section("In Children");
+			static readonly Section inParents = new Section("In Parents");
+			static readonly Section inSiblings = new Section("In Siblings");
 
 			int SelectedIndex
 			{
@@ -38,7 +77,7 @@ namespace AdvancedObjectSelector
 				{
 					var obj = GetValue();
 					if (!obj) return -1;
-					int i = allObjects.FindIndex(o => o == obj);
+					int i = inScene.objects.FindIndex(o => o == obj);
 					if (i >= 0)
 					{
 						return i;
@@ -60,33 +99,26 @@ namespace AdvancedObjectSelector
 
 			internal override void OnInit()
 			{
-				allObjects.Clear();
-				onSelf.Clear();
-				inChildren.Clear();
-				inParents.Clear();
 				if (IsTypeSuitable(targetType))
 				{
 					var go = ((Component)serializedObject.targetObject).gameObject;
-					allObjects.AddRange(FindObjectsOfType(targetType).Where(o => GetGameObject(o).scene == go.scene));
+					inScene.Set(FindObjectsOfType(targetType).Where(o => GetGameObject(o).scene == go.scene).OrderBy(o => o.name), null);
 
 					if (targetType == typeof(GameObject))
 					{
-						onSelf.Add(go);
-						inChildren.AddRange(go.GetComponentsInChildren<Transform>().Select(t => t.gameObject));
-						inParents.AddRange(go.GetComponentsInParent<Transform>().Select(t => t.gameObject));
+						onSelf.objects.Add(go);
+						inChildren.Set(go.GetComponentsInChildren<Transform>().Select(t => t.gameObject), onSelf);
+						inParents.Set(go.GetComponentsInParent<Transform>().Select(t => t.gameObject), onSelf);
+						inSiblings.Set(GetComponentsInSiblings(go, typeof(Transform), true).Select(t => t.gameObject), null);
 					}
 					else
 					{
-						onSelf.AddRange(go.GetComponents(targetType));
-						inChildren.AddRange(go.GetComponentsInChildren(targetType));
-						inParents.AddRange(go.GetComponentsInParent(targetType));
+						onSelf.Set(go.GetComponents(targetType), null);
+						inChildren.Set(go.GetComponentsInChildren(targetType), onSelf);
+						inParents.Set(go.GetComponentsInParent(targetType), onSelf);
+						inSiblings.Set(GetComponentsInSiblings(go, targetType, true), null);
 					}
-					inChildren.RemoveAll(c => onSelf.Contains(c));
-					inParents.RemoveAll(c => onSelf.Contains(c));
 				}
-				expandInChildren = true;
-				expandInParents = true;
-				expandAll = true;
 
 				UpdatePosition(true);
 			}
@@ -100,44 +132,59 @@ namespace AdvancedObjectSelector
 				navSection = SceneObjectSection.None;
 				navIndex = 0;
 
-				if (v == null || onSelf.Contains(v))
+				if (v == null || onSelf.objects.Contains(v))
 				{
 					//Do nothing, it's on (or very near to) the top
 					navSection = SceneObjectSection.Self;
-					navIndex = onSelf.IndexOf(v);
+					navIndex = onSelf.objects.IndexOf(v);
 				}
 				else
 				{
-					int index = inChildren.IndexOf(v);
+					int index = inChildren.objects.IndexOf(v);
 					if (index >= 0)
 					{
 						//It's a child object
 						navSection = SceneObjectSection.Children;
 						navIndex = index;
-						pos = 3 + onSelf.Count + index;
-						expandInChildren = true;
+						pos = 3 + onSelf.objects.Count + index;
+						inChildren.expand = true;
 					}
 					else
 					{
-						index = inParents.IndexOf(v);
+						index = inParents.objects.IndexOf(v);
 						if (index >= 0)
 						{
 							//It's a parent object
 							navSection = SceneObjectSection.Parents;
 							navIndex = index;
-							pos = 4 + onSelf.Count + index;
-							if (expandInChildren) pos += inChildren.Count;
-							expandInParents = true;
+							pos = 4 + onSelf.objects.Count + index;
+							if (inChildren.expand) pos += inChildren.objects.Count;
+							inParents.expand = true;
 						}
 						else
 						{
-							//It's neither a child nor parent object
-							index = allObjects.IndexOf(v);
-							navSection = SceneObjectSection.All;
-							navIndex = index;
-							pos = 7 + onSelf.Count + index;
-							if (expandInChildren) pos += inChildren.Count;
-							if (expandInParents) pos += inParents.Count;
+							index = inSiblings.objects.IndexOf(v);
+							if(index >= 0)
+							{
+								//It's a sibling (or siblings child) object
+								navSection = SceneObjectSection.Siblings;
+								navIndex = index;
+								pos = 5 + onSelf.objects.Count + index;
+								if(inChildren.expand) pos += inChildren.objects.Count;
+								if(inParents.expand) pos += inParents.objects.Count;
+								inSiblings.expand = true;
+							}
+							else
+							{
+								//It's neither a child nor parent object
+								index = inScene.objects.IndexOf(v);
+								navSection = SceneObjectSection.All;
+								navIndex = index;
+								pos = 7 + onSelf.objects.Count + index;
+								if(inChildren.expand) pos += inChildren.objects.Count;
+								if(inParents.expand) pos += inParents.objects.Count;
+								if(inSiblings.expand) pos += inSiblings.objects.Count;
+							}
 						}
 					}
 					if(updateScrollingPos) scroll.y = pos * listItemHeight - (instance.position.height - previewAreaHeight - 40) * 0.5f;
@@ -156,66 +203,44 @@ namespace AdvancedObjectSelector
 
 				var targetTransform = GetGameObject(serializedObject.targetObject).transform;
 
-				for (int i = 0; i < onSelfFiltered.Count; i++)
+				for(int i = 0; i < onSelf.filtered.Count; i++)
 				{
-					DrawItem(onSelfFiltered[i], "(Self)");
+					DrawItem(onSelf.filtered[i], "(Self)");
 				}
 
-				GUI.enabled = inChildrenFiltered.Count > 0;
-				expandInChildren = EditorGUI.Foldout(NextListRect(), expandInChildren, $"In Children [{inChildrenFiltered.Count}/{inChildren.Count}]");
-				if (expandInChildren)
-				{
-					indentLevel++;
-					for (int i = 0; i < inChildrenFiltered.Count; i++)
-					{
-						string depthStr = null;
-						if (showRanks)
-						{
-							depthStr = GetChildDepth(GetGameObject(inChildrenFiltered[i]).transform, targetTransform) + ".";
-						}
-						DrawItem(inChildrenFiltered[i], "", depthStr);
-					}
-					indentLevel--;
-				}
+				DrawSubSection(inChildren, targetTransform);
 
-				GUI.enabled = inParentsFiltered.Count > 0;
-				expandInParents = EditorGUI.Foldout(NextListRect(), expandInParents, $"In Parents [{inParentsFiltered.Count}/{inParents.Count}]");
-				if (expandInParents)
-				{
-					indentLevel++;
-					for (int i = 0; i < inParentsFiltered.Count; i++)
-					{
-						string depthStr = null;
-						if (showRanks)
-						{
-							depthStr = GetParentDepth(GetGameObject(inParentsFiltered[i]).transform, targetTransform) + ".";
-						}
-						DrawItem(inParentsFiltered[i], "", depthStr);
-					}
-					indentLevel--;
-				}
+				DrawSubSection(inParents, targetTransform);
+
+				DrawSubSection(inSiblings, null);
 
 				Separator();
 
-				GUI.enabled = allObjectsFiltereed.Count > 0;
-				expandAll = EditorGUI.Foldout(NextListRect(), expandAll, $"In Scene [{allObjectsFiltereed.Count}/{allObjects.Count}]");
-				if (expandAll)
-				{
-					indentLevel++;
-					for (int i = 0; i < allObjectsFiltereed.Count; i++)
-					{
-						string hierarchicalDepthStr = null;
-						if (showRanks)
-						{
-							hierarchicalDepthStr = GetHierarchicalDepth(GetGameObject(allObjectsFiltereed[i]).transform) + ".";
-						}
-						DrawItem(allObjectsFiltereed[i], "", hierarchicalDepthStr);
-					}
-					indentLevel--;
-				}
+				DrawSubSection(inScene, null);
+
 				GUI.enabled = true;
 
 				EndScrollView(listIndex * listItemHeight);
+			}
+
+			private void DrawSubSection(Section section, Transform targetTransform)
+			{
+				GUI.enabled = section.filtered.Count > 0;
+				section.expand = EditorGUI.Foldout(NextListRect(), section.expand, $"{section.title} [{section.filtered.Count}/{section.objects.Count}]");
+				if(section.expand)
+				{
+					indentLevel++;
+					for(int i = 0; i < section.filtered.Count; i++)
+					{
+						string depthStr = null;
+						if(targetTransform && showRanks)
+						{
+							depthStr = GetChildDepth(GetGameObject(section.filtered[i]).transform, targetTransform) + ".";
+						}
+						DrawItem(section.filtered[i], "", depthStr);
+					}
+					indentLevel--;
+				}
 			}
 
 			void DrawItem(Object obj, string prefix = "", string frontLabel = null)
@@ -240,7 +265,6 @@ namespace AdvancedObjectSelector
 					icon = null;
 				}
 				if(!string.IsNullOrEmpty(prefix)) content.text = prefix + " " + content.text;
-				//var rect = GUILayoutUtility.GetRect(content, Styles.listItem, GUILayout.ExpandWidth(true), GUILayout.Height(EditorStyles.label.CalcHeight(content, 1000) + 2));
 
 				bool isSelected = obj ? IsSelected(obj) : GetValue() == null;
 				if(Event.current.type == EventType.Repaint)
@@ -248,7 +272,7 @@ namespace AdvancedObjectSelector
 					var style = isSelected ? Styles.listItemSelected : Styles.listItem;
 
 					style.Draw(rect, "", false, false, false, false);
-					rect.xMin += GetIndentationOffset();
+					rect.xMin += 4 + GetIndentationOffset();
 					rect.SplitHorizontal(16, out var rIcon, out var rLabel, 2);
 					rIcon.width = 16;
 					rIcon.height = rIcon.width;
@@ -313,57 +337,27 @@ namespace AdvancedObjectSelector
 			List<Object> GetFilteredListByType(SceneObjectSection sec)
 			{
 				if (sec == SceneObjectSection.None) return null;
-				else if (sec == SceneObjectSection.Children) return inChildrenFiltered;
-				else if (sec == SceneObjectSection.Parents) return inParentsFiltered;
-				else return allObjectsFiltereed;
+				else if (sec == SceneObjectSection.Children) return inChildren.filtered;
+				else if (sec == SceneObjectSection.Parents) return inParents.filtered;
+				else if (sec == SceneObjectSection.Siblings) return inSiblings.filtered;
+				else return inScene.filtered;
 			}
 
 			internal override void OnSearchChange()
 			{
-				allObjectsFiltereed.Clear();
-				inChildrenFiltered.Clear();
-				inParentsFiltered.Clear();
-				onSelfFiltered.Clear();
-				if (!string.IsNullOrEmpty(searchString))
-				{
-					var keywords = new List<string>(searchString.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries));
-					allObjectsFiltereed.AddRange(allObjects.Where(	o => SearchForWords(o, o.name, o.GetType(), keywords)));
-					inChildrenFiltered.AddRange(inChildren.Where(	o => SearchForWords(o, o.name, o.GetType(), keywords)));
-					inParentsFiltered.AddRange(inParents.Where(		o => SearchForWords(o, o.name, o.GetType(), keywords)));
-					onSelfFiltered.AddRange(onSelf.Where(			o => SearchForWords(o, o.name, o.GetType(), keywords)));
-				}
-				else
-				{
-					allObjectsFiltereed.AddRange(allObjects);
-					inChildrenFiltered.AddRange(inChildren);
-					inParentsFiltered.AddRange(inParents);
-					onSelfFiltered.AddRange(onSelf);
-				}
+				List<string> keywords = !string.IsNullOrWhiteSpace(searchString)
+					? new List<string>(searchString.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries))
+					: null;
+				onSelf.ApplyFilter(keywords);
+				inChildren.ApplyFilter(keywords);
+				inParents.ApplyFilter(keywords);
+				inSiblings.ApplyFilter(keywords);
+				inScene.ApplyFilter(keywords);
 			}
 
 			internal override void OnSelectionChange(Object newSelection)
 			{
-				/*
-				if(newSelection != null)
-				{
-					var src = EditorGUIUtility.ObjectContent(newSelection, newSelection.GetType()).image as Texture2D;
-					if(src)
-					{
-						
-						selectedObjectIcon = new Texture2D(src.width, src.height, src.format, src.mipmapCount, false);
-						Graphics.CopyTexture(src, 0, 0, selectedObjectIcon, 0, 0);
-						var pixels = selectedObjectIcon.GetPixels32();
-						for(int i = 0; i < pixels.Length; i++)
-						{
-							pixels[i].r = 255;
-							pixels[i].g = 255;
-							pixels[i].b = 255;
-						}
-						selectedObjectIcon.SetPixels32(pixels);
-						selectedObjectIcon.Apply();
-					}
-				}
-				*/
+
 			}
 
 			internal override void OnValueChange(Object newValue)
@@ -395,6 +389,34 @@ namespace AdvancedObjectSelector
 				rect.SplitHorizontal(rect.width - 50, out _, out var rankRect);
 				rankRect.x -= 10;
 				showRanks = GUI.Toggle(rankRect, showRanks, "Ranks", EditorStyles.toolbarButton);
+			}
+
+			static Component[] GetComponentsInSiblings(GameObject go, System.Type type, bool includeChildren)
+			{
+				var t = go.transform;
+				if(t.parent != null)
+				{
+					List<Component> comps = new List<Component>();
+					var ownIndex = t.GetSiblingIndex();
+					var parent = t.parent;
+					for(int i = 0; i < parent.childCount; i++)
+					{
+						if(i == ownIndex) continue;
+						if(includeChildren)
+						{
+							comps.AddRange(parent.GetChild(i).GetComponentsInChildren(type, true));
+						}
+						else
+						{
+							comps.AddRange(parent.GetChild(i).GetComponents(type));
+						}
+					}
+					return comps.ToArray();
+				}
+				else
+				{
+					return new Component[0];
+				}
 			}
 
 			static int GetChildDepth(Transform child, Transform target)
