@@ -28,6 +28,14 @@ namespace AdvancedObjectSelector
 
 			class Asset
 			{
+				public enum GameObjectType
+				{
+					NotApplicable,
+					Prefab,
+					Model,
+					Submodel
+				}
+
 				public string guid;
 				public string assetName;
 				public string path;
@@ -38,6 +46,33 @@ namespace AdvancedObjectSelector
 				private Texture2D thumbnail;
 
 				private bool isLoadingThumbnail;
+
+				public GameObjectType GameObjectAssetType
+				{
+					get
+					{
+						string ext = System.IO.Path.GetExtension(path).ToLower();
+						if(assetType != null && assetType != typeof(GameObject))
+						{
+							return GameObjectType.NotApplicable;
+						}
+						if(ext == ".prefab")
+						{
+							return GameObjectType.Prefab;
+						}
+						else
+						{
+							if(AssetDatabase.IsSubAsset(GetAssetObject()))
+							{
+								return GameObjectType.Submodel;
+							}
+							else
+							{
+								return GameObjectType.Model;
+							}
+						}
+					}
+				}
 
 				public bool IsVisible
 				{
@@ -58,13 +93,14 @@ namespace AdvancedObjectSelector
 				public static Asset CreateAsset(string guid)
 				{
 					var path = AssetDatabase.GUIDToAssetPath(guid);
-					return new Asset()
+					var asset = new Asset()
 					{
 						guid = guid,
 						path = path,
 						assetType = AssetDatabase.GetMainAssetTypeAtPath(path),
 						assetName = System.IO.Path.GetFileNameWithoutExtension(path)
 					};
+					return asset;
 				}
 
 				public static Asset CreateSubAsset(Object subAsset, string parentGuid)
@@ -330,11 +366,17 @@ namespace AdvancedObjectSelector
 				bool isSelected = asset != null ? IsSelected(asset) : currentValue == null;
 				if(Event.current.type == EventType.Repaint)
 				{
+
 					var style = isSelected ? Styles.listItemSelected : Styles.listItem;
 
 					if(isGrid) rect = rect.Inset(4, 4, 4, 4);
 
 					style.Draw(rect, "", false, false, false, false);
+
+					if(!isGrid && asset != null && AssetDatabase.IsSubAsset(asset.GetAssetObject()))
+					{
+						rect.xMin += 16;
+					}
 
 					Rect rIcon, rLabel;
 
@@ -351,12 +393,21 @@ namespace AdvancedObjectSelector
 					var nameLabelStyle = isSelected ? Styles.nameLabelSelected : Styles.nameLabel;
 					var typeLabelStyle = isSelected ? Styles.typeLabelSelected : Styles.typeLabel;
 
-					bool allowWhiteout = asset != null  && !(typeof(Texture).IsAssignableFrom(asset.assetType) || asset.assetType == typeof(Material));
+					bool allowWhiteout = !isGrid && (asset != null  && !(typeof(Texture).IsAssignableFrom(asset.assetType) || asset.assetType == typeof(Material)));
 					DrawIcon(rIcon, icon, isSelected, allowWhiteout);
 
 					//EditorGUIUtility.get
 
 					GUI.Label(rLabel, content, nameLabelStyle);
+
+					if(asset != null && !isGrid && targetType == typeof(GameObject))
+					{
+						content.text = asset.GameObjectAssetType.ToString();
+						var w = Styles.typeLabel.CalcSize(content).x;
+						rLabel = rLabel.Inset(1, 1, 1, 1);
+						rLabel.xMin = rLabel.xMax - w;
+						GUI.Label(rLabel, content, typeLabelStyle);
+					}
 
 					/*
 					if(needsTypeLabel && obj)

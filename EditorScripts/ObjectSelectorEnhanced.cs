@@ -43,7 +43,7 @@ namespace AdvancedObjectSelector
 				listItemHeight = listItem.CalcHeight(new GUIContent("xyz"), 100);
 				typeLabel = new GUIStyle(EditorStyles.helpBox)
 				{
-					fontSize = 8,
+					fontSize = 9,
 					alignment = TextAnchor.MiddleRight,
 					wordWrap = false
 				};

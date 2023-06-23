@@ -106,7 +106,7 @@ namespace AdvancedObjectSelector
 
 					if (targetType == typeof(GameObject))
 					{
-						onSelf.objects.Add(go);
+						onSelf.Set(new GameObject[] { go }, null);
 						inChildren.Set(go.GetComponentsInChildren<Transform>().Select(t => t.gameObject), onSelf);
 						inParents.Set(go.GetComponentsInParent<Transform>().Select(t => t.gameObject), onSelf);
 						inSiblings.Set(GetComponentsInSiblings(go, typeof(Transform), true).Select(t => t.gameObject), null);
@@ -287,14 +287,14 @@ namespace AdvancedObjectSelector
 					{
 						content.text = obj.GetType().Name;
 						var w = Styles.typeLabel.CalcSize(content).x;
-						rLabel = rLabel.Inset(2, 2, 2, 2);
+						rLabel = rLabel.Inset(1, 1, 1, 1);
 						rLabel.xMin = rLabel.xMax - w;
 						GUI.Label(rLabel, content, typeLabelStyle);
 					}
 
 					if(!string.IsNullOrEmpty(frontLabel))
 					{
-						var r = rect.Inset(2, 2, 2, 2);
+						var r = rect.Inset(1, 1, 1, 1);
 						r.x -= GetIndentationOffset();
 						r.width = r.height;
 						GUI.Label(r, frontLabel, typeLabelStyle);
