@@ -42,14 +42,16 @@ namespace AdvancedObjectSelector
 			if (usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
 			Rect knob2 = knob;
 
+			var mods = Event.current.modifiers;
+
 			bool popout = property.objectReferenceValue != null && Event.current.shift;
 			bool seekParent = false;
 			bool seekChildren = false;
 
 			if(typeof(Component).IsAssignableFrom(fieldType) && property.serializedObject.targetObject is Component comp)
 			{
-				seekChildren = Event.current.control;
-				seekParent = Event.current.alt;
+				//seekChildren = Event.current.control;
+				//seekParent = Event.current.alt;
 
 				if((seekChildren || seekParent) && GUI.Button(knob2, GUIContent.none))
 				{
@@ -71,10 +73,14 @@ namespace AdvancedObjectSelector
 
 			var inspectRect = position;
 			inspectRect.xMin += EditorGUIUtility.labelWidth;
-			if(popout && GUI.Button(inspectRect, GUIContent.none, GUIStyle.none))
+
+			var lEnabledState = GUI.enabled;
+			GUI.enabled &= popout;
+			if(GUI.Button(inspectRect, GUIContent.none, GUIStyle.none))
 			{
 				PopoutInspector.Open(property.objectReferenceValue);
 			}
+			GUI.enabled = lEnabledState;
 
 			var lastColor = GUI.backgroundColor;
 			if(popout) GUI.backgroundColor *= new Color(0.8f, 0.8f, 1.0f);
