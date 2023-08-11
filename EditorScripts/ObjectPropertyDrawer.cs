@@ -30,8 +30,7 @@ namespace AdvancedObjectSelector
 				arrowDownIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(packageRoot + "GetChildrenIcon.psd");
 			}
 
-			var usage = Preferences.Instance.usage;
-			if(usage == Preferences.UsageMode.Disabled)
+			if(Preferences.Usage == Preferences.UsageMode.Disabled)
 			{
 				EditorGUI.PropertyField(position, property, true);
 				return;
@@ -39,7 +38,7 @@ namespace AdvancedObjectSelector
 
 			position.SplitHorizontal(position.width - 18, out _, out var knob);
 			knob = knob.Inset(0, 0, 1, 1);
-			if (usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
+			if (Preferences.Usage == Preferences.UsageMode.ExtraButton) knob.x -= 20;
 			Rect knob2 = knob;
 
 			var mods = Event.current.modifiers;
@@ -88,7 +87,7 @@ namespace AdvancedObjectSelector
 			EditorGUI.ObjectField(position, property, label);
 
 
-			if (usage == Preferences.UsageMode.ExtraButton)
+			if (Preferences.Usage == Preferences.UsageMode.ExtraButton)
 			{
 				if (Event.current.type == EventType.Repaint) extraBtnStyle.Draw(knob, GUIContent.none, ctrlID);
 				knob.xMin = knob.xMax - 8;

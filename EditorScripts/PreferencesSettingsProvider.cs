@@ -19,12 +19,7 @@ namespace AdvancedObjectSelector
 
 		static void DrawGUI(string searchContext)
 		{
-			var prefs = Preferences.GetSerializedSettings();
-			EditorGUILayout.PropertyField(prefs.FindProperty(nameof(Preferences.usage)));
-			if(prefs.ApplyModifiedPropertiesWithoutUndo())
-			{
-				Preferences.Save();
-			}
+			Preferences.Usage = (Preferences.UsageMode)EditorGUILayout.EnumPopup("Usage", Preferences.Usage);
 		}
 	}
 

@@ -8,46 +8,19 @@ namespace AdvancedObjectSelector
 {
 	public class Preferences : ScriptableObject
 	{
+		private const string usageKey = "AdvancedObjectSelector_Usage";
+
 		public enum UsageMode
 		{
-			Disabled,
-			OverrideDefault,
-			ExtraButton
+			Disabled = 0,
+			OverrideDefault = 1,
+			ExtraButton = 2
 		}
 
-		static string Path => System.IO.Path.Combine(Application.dataPath, "../ProjectSettings/AdvancedObjectSelector.asset");
-
-		public static Preferences Instance
+		public static UsageMode Usage
 		{
-			get
-			{
-				if(preferences == null)
-				{
-					preferences = CreateInstance<Preferences>();
-					if(File.Exists(Path))
-					{
-						JsonUtility.FromJsonOverwrite(File.ReadAllText(Path), preferences);
-					}
-					else
-					{
-						File.WriteAllText(Path, JsonUtility.ToJson(preferences));
-					}
-				}
-				return preferences;
-			}
-		}
-		private static Preferences preferences;
-
-		public UsageMode usage = UsageMode.ExtraButton;
-
-		internal static SerializedObject GetSerializedSettings()
-		{
-			return new SerializedObject(Instance);
-		}
-
-		internal static void Save()
-		{
-			File.WriteAllText(Path, JsonUtility.ToJson(preferences));
+			get => (UsageMode)EditorPrefs.GetInt(usageKey, 2);
+			set => EditorPrefs.SetInt(usageKey, (int)value);
 		}
 	} 
 }
