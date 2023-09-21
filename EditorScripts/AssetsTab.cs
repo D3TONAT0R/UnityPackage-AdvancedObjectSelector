@@ -81,7 +81,7 @@ namespace AdvancedObjectSelector
 					{
 						if(value != visible)
 						{
-							LoadPreviewAsync();
+							LoadPreview();
 						}
 						visible = value;
 					}
@@ -161,26 +161,14 @@ namespace AdvancedObjectSelector
 				{
 					if(!thumbnail && !isLoadingThumbnail)
 					{
-						LoadPreviewAsync();
+						LoadPreview();
 					}
 					return thumbnail;
 				}
 
-				void LoadPreviewAsync()
+				void LoadPreview()
 				{
-					isLoadingThumbnail = true;
-					//var thread = new Thread(() =>
-					//{
-						obj = GetAssetObject();
-						thumbnail = AssetPreview.GetAssetPreview(obj);
-					if(thumbnail == null)
-					{
-						thumbnail = AssetPreview.GetMiniThumbnail(obj);
-					}
-						//if(!thumbnail) thumbnail = AssetPreview.GetMiniThumbnail(obj);
-						isLoadingThumbnail = false;
-					//});
-					//thread.Start();
+					thumbnail = AssetPreviewLoader.LoadPreviewFromGUID(guid);
 				}
 			}
 
@@ -373,7 +361,17 @@ namespace AdvancedObjectSelector
 
 					style.Draw(rect, "", false, false, false, false);
 
-					if(!isGrid && asset != null && AssetDatabase.IsSubAsset(asset.GetAssetObject()))
+					//var assetObj = asset != null ? asset.GetAssetObject() : null;
+
+					/*
+					if(asset != null && assetObj == null)
+					{
+						Debug.Log("null: " + asset.assetName);
+					}
+					*/
+
+					//if(!isGrid && asset != null && assetObj != null && AssetDatabase.IsSubAsset(assetObj))
+					if(!isGrid && asset != null)
 					{
 						rect.xMin += 16;
 					}
