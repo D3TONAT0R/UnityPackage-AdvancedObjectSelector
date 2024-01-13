@@ -27,8 +27,13 @@ namespace AdvancedObjectSelector
 			public static GUIStyle typeLabel;
 			public static GUIStyle typeLabelSelected;
 			public static GUIStyle separator = "EyeDropperHorizontalLine";
+#if UNITY_2022_1_OR_NEWER
+			public static GUIStyle searchField = "ToolbarSearchTextField";
+			public static GUIStyle searchFieldEnd = "ToolbarSearchCancelButton";
+#else
 			public static GUIStyle searchField = "ToolbarSeachTextField";
 			public static GUIStyle searchFieldEnd = "ToolbarSeachCancelButton";
+#endif
 
 			public static readonly GUIContent packagesVisibilityContent = EditorGUIUtility.TrIconContent("SceneViewVisibility", "Number of hidden packages, click to toggle packages visibility");
 

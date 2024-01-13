@@ -17,7 +17,14 @@ namespace AdvancedObjectSelector
 
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 		{
-			OnGUI(position, property, label, fieldInfo.FieldType);
+			if(fieldInfo == null)
+			{
+				EditorGUI.PropertyField(position, property, true);
+			}
+			else
+			{
+				OnGUI(position, property, label, fieldInfo.FieldType);
+			}
 		}
 
 		public static void OnGUI(Rect position, SerializedProperty property, GUIContent label, System.Type fieldType)
