@@ -15,16 +15,16 @@ namespace AdvancedObjectSelector
 		private UnityObject asset;
 		private Editor assetEditor;
 
-		public static void Open(UnityObject asset)
+		public static void Open(UnityObject obj)
 		{
 
 			var lastSelection = Selection.objects;
-			Selection.activeObject = asset;
+			Selection.activeObject = obj;
 			var windowType = typeof(Editor).Assembly.GetType("UnityEditor.InspectorWindow");
 			//var mi = typeof(EditorWindow).GetMethod("CreateWindow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, new Type[] { typeof(string), typeof(Type[]) }, null);
 			//var inspectorWindow = (EditorWindow)Convert.ChangeType(mi.MakeGenericMethod(windowType).Invoke(null, new object[] { "Popout Inspector", new System.Type[0] }), windowType);
 			var inspectorWindow = (EditorWindow)CreateInstance(windowType);
-			inspectorWindow.titleContent = new GUIContent(asset.name);
+			inspectorWindow.titleContent = new GUIContent(obj.name);
 			windowType.GetProperty("isLocked").SetValue(inspectorWindow, true);
 			inspectorWindow.ShowUtility();
 			Selection.objects = lastSelection;

@@ -102,7 +102,7 @@ namespace AdvancedObjectSelector
 				if (IsTypeSuitable(targetType))
 				{
 					var go = ((Component)serializedObject.targetObject).gameObject;
-					inScene.Set(FindObjectsOfType(targetType).Where(o => GetGameObject(o).scene == go.scene).OrderBy(o => o.name), null);
+					inScene.Set(FindObjectsOfType(targetType, true).Where(o => GetGameObject(o).scene == go.scene).OrderBy(o => o.name), null);
 
 					if (targetType == typeof(GameObject))
 					{

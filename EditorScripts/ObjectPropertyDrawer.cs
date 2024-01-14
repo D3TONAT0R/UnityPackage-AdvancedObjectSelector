@@ -56,11 +56,16 @@ namespace AdvancedObjectSelector
 
 			if(typeof(Component).IsAssignableFrom(fieldType) && property.serializedObject.targetObject is Component comp)
 			{
-				//seekChildren = Event.current.control;
-				//seekParent = Event.current.alt;
+				seekChildren = Event.current.control;
+				seekParent = Event.current.alt;
 
 				if((seekChildren || seekParent) && GUI.Button(knob2, GUIContent.none))
 				{
+					if(seekChildren && seekParent)
+					{
+						property.objectReferenceValue = comp.GetComponent(fieldType);
+						if(property.objectReferenceValue) EditorGUIUtility.PingObject(property.objectReferenceValue);
+					}
 					if(seekParent)
 					{
 						property.objectReferenceValue = comp.GetComponentInParent(fieldType);
@@ -82,9 +87,22 @@ namespace AdvancedObjectSelector
 
 			var lEnabledState = GUI.enabled;
 			GUI.enabled &= popout;
-			if(GUI.Button(inspectRect, GUIContent.none, GUIStyle.none))
+			if(property.objectReferenceValue && GUI.Button(inspectRect, GUIContent.none, GUIStyle.none))
 			{
-				PopoutInspector.Open(property.objectReferenceValue);
+				Object targetObject;
+				if(property.objectReferenceValue is Component c && Preferences.FullGameObjectPopout)
+				{
+					targetObject = c.gameObject;
+				}
+				else targetObject = property.objectReferenceValue;
+#if UNITY_2020_1_OR_NEWER
+				var flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+				var type = System.Type.GetType("UnityEditor.PropertyEditor, UnityEditor");
+				var method = type.GetMethod("OpenPropertyEditor", flags, null, new System.Type[] { typeof(UnityEngine.Object), typeof(bool) }, null);
+				method.Invoke(null, new object[] { targetObject, true });
+#else
+				PopoutInspector.Open(targetObject);
+#endif
 			}
 			GUI.enabled = lEnabledState;
 

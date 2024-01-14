@@ -19,7 +19,10 @@ namespace AdvancedObjectSelector
 
 		static void DrawGUI(string searchContext)
 		{
+			EditorGUIUtility.labelWidth = 200;
 			Preferences.Usage = (Preferences.UsageMode)EditorGUILayout.EnumPopup("Usage", Preferences.Usage);
+			Preferences.SeekModeEnabled = EditorGUILayout.Toggle("Seek mode enabled (Ctrl / Alt)", Preferences.SeekModeEnabled);
+			Preferences.FullGameObjectPopout = EditorGUILayout.Toggle("Show full game object in poout window", Preferences.FullGameObjectPopout);
 		}
 	}
 
