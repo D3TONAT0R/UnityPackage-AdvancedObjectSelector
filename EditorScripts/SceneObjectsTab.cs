@@ -2,6 +2,7 @@
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace AdvancedObjectSelector
 {
@@ -97,12 +98,33 @@ namespace AdvancedObjectSelector
 				return type.IsSubclassOf(typeof(Component)) || type == typeof(Component) || type == typeof(GameObject);
 			}
 
+			private IEnumerable<Object> GetAllComponentsInScene(Scene scene, System.Type type)
+			{
+				if(type == typeof(GameObject))
+				{
+					foreach(var rootObj in scene.GetRootGameObjects())
+					{
+						foreach(var obj in rootObj.GetComponentsInChildren<Transform>(true))
+						{
+							yield return obj.gameObject;
+						}
+					}
+				}
+				foreach(var rootObj in scene.GetRootGameObjects())
+				{
+					foreach(var comp in rootObj.GetComponentsInChildren(type, true))
+					{
+						yield return comp;
+					} 
+				}
+			}
+
 			internal override void OnInit()
 			{
 				if (IsTypeSuitable(targetType))
 				{
 					var go = ((Component)serializedObject.targetObject).gameObject;
-					inScene.Set(FindObjectsOfType(targetType, true).Where(o => GetGameObject(o).scene == go.scene).OrderBy(o => o.name), null);
+					inScene.Set(GetAllComponentsInScene(go.scene, targetType).OrderBy(o => o.name), null);
 
 					if (targetType == typeof(GameObject))
 					{
