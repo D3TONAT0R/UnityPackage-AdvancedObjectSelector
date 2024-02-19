@@ -1,8 +1,12 @@
 {
   "name": "com.github.d3tonat0r.advancedobjectselector",
   "version": "0.2.0",
-  "displayName": "D3T - Advanced Object Selector",
+  "displayName": "Advanced Object Selector",
   "description": "",
   "category": "",
+  "author": {
+    "name": "D3TONAT0R",
+    "url": "https://github.com/d3tonat0r"
+  },
   "hideInEditor": false
 }
