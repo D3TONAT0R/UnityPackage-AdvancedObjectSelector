@@ -39,7 +39,7 @@ namespace AdvancedObjectSelector
 
 			if(Preferences.Usage == Preferences.UsageMode.Disabled)
 			{
-				EditorGUI.PropertyField(position, property, true);
+				EditorGUI.PropertyField(position, property, label, true);
 				return;
 			}
 
